@@ -1,7 +1,11 @@
-package toni.examplemod;
+package toni.earlybedtime;
 
+import net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
-import toni.examplemod.foundation.config.AllConfigs;
+import net.minecraft.world.level.dimension.DimensionType;
+import toni.earlybedtime.foundation.config.AllConfigs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -47,15 +51,15 @@ import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 
 
 #if FORGELIKE
-@Mod("example_mod")
+@Mod("earlybedtime")
 #endif
-public class ExampleMod #if FABRIC implements ModInitializer, ClientModInitializer #endif
+public class EarlyBedtime #if FABRIC implements ModInitializer, ClientModInitializer #endif
 {
-    public static final String MODNAME = "Example Mod";
-    public static final String ID = "example_mod";
+    public static final String MODNAME = "Early Bedtime";
+    public static final String ID = "earlybedtime";
     public static final Logger LOGGER = LogManager.getLogger(MODNAME);
 
-    public ExampleMod(#if NEO IEventBus modEventBus, ModContainer modContainer #endif) {
+    public EarlyBedtime(#if NEO IEventBus modEventBus, ModContainer modContainer #endif) {
         #if FORGE
         var context = FMLJavaModLoadingContext.get();
         var modEventBus = context.getModEventBus();
@@ -82,21 +86,37 @@ public class ExampleMod #if FABRIC implements ModInitializer, ClientModInitializ
         #if FABRIC
             AllConfigs.register((type, spec) -> {
                 #if mc >= 215
-                ConfigRegistry.INSTANCE.register(ExampleMod.ID, type, spec);
+                ConfigRegistry.INSTANCE.register(EarlyBedtime.ID, type, spec);
                 #elif mc >= 211
-                NeoForgeConfigRegistry.INSTANCE.register(ExampleMod.ID, type, spec);
+                NeoForgeConfigRegistry.INSTANCE.register(EarlyBedtime.ID, type, spec);
                 #else
-                ForgeConfigRegistry.INSTANCE.register(ExampleMod.ID, type, spec);
+                ForgeConfigRegistry.INSTANCE.register(EarlyBedtime.ID, type, spec);
                 #endif
             });
         #endif
+
+        EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, sleepingPos, vanillaResult) -> {
+            var level = player.level();
+            if (level.isClientSide())
+                return InteractionResult.PASS;
+
+            if (level.dimension() != Level.OVERWORLD)
+                return InteractionResult.PASS;
+
+            var time = level.dayTime();
+            var allowedSleepTime = AllConfigs.common().sleepTime.get();
+            if (time > allowedSleepTime && time < 13000)
+                return InteractionResult.SUCCESS;
+
+            return InteractionResult.PASS;
+        });
     }
 
     #if FABRIC @Override #endif
     public void onInitializeClient() {
         #if AFTER_21_1
             #if FABRIC
-            ConfigScreenFactoryRegistry.INSTANCE.register(ExampleMod.ID, ConfigurationScreen::new);
+            ConfigScreenFactoryRegistry.INSTANCE.register(EarlyBedtime.ID, ConfigurationScreen::new);
             #endif
         #endif
     }
